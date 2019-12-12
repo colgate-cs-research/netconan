@@ -25,7 +25,8 @@ from .ip_anonymization import (
     IpAnonymizer, IpV6Anonymizer, anonymize_ip_addr)
 from .sensitive_item_removal import (
     anonymize_as_numbers, AsNumberAnonymizer, replace_matching_item,
-    SensitiveWordAnonymizer, generate_default_sensitive_item_regexes)
+    SensitiveWordAnonymizer, generate_default_sensitive_item_regexes, 
+    LineAnonymizer)
 
 _DEFAULT_SALT_LENGTH = 16
 _CHAR_CHOICES = string.ascii_letters + string.digits
@@ -34,7 +35,8 @@ _CHAR_CHOICES = string.ascii_letters + string.digits
 def anonymize_files(input_path, output_path, anon_pwd, anon_ip,
                     salt=None, dumpfile=None, sensitive_words=None,
                     undo_ip_anon=False, as_numbers=None, reserved_words=None,
-                    preserve_prefixes=None, preserve_networks=None):
+                    preserve_prefixes=None, preserve_networks=None,
+                    line_beginnings=None):
     """Anonymize each file in input and save to output."""
     anonymizer4 = None
     anonymizer6 = None
@@ -60,6 +62,8 @@ def anonymize_files(input_path, output_path, anon_pwd, anon_ip,
         anonymizer6 = IpV6Anonymizer(salt)
     if as_numbers is not None:
         anonymizer_as_num = AsNumberAnonymizer(as_numbers, salt)
+    if line_beginnings is not None:
+        anonymizer_line = LineAnonymizer(line_beginnings)
 
     if not os.path.exists(input_path):
         raise ValueError("Input does not exist")
@@ -92,7 +96,8 @@ def anonymize_files(input_path, output_path, anon_pwd, anon_ip,
                            anonymizer_as_num=anonymizer_as_num,
                            undo_ip_anon=undo_ip_anon,
                            anonymizer4=anonymizer4,
-                           anonymizer6=anonymizer6)
+                           anonymizer6=anonymizer6,
+                           anonymizer_line=anonymizer_line)
         except Exception:
             logging.error('Failed to anonymize file %s', in_path, exc_info=True)
 
@@ -105,7 +110,7 @@ def anonymize_files(input_path, output_path, anon_pwd, anon_ip,
 def anonymize_file(filename_in, filename_out, compiled_regexes=None,
                    anonymizer4=None, anonymizer6=None, pwd_lookup=None,
                    anonymizer_sensitive_word=None, anonymizer_as_num=None,
-                   undo_ip_anon=False):
+                   undo_ip_anon=False, anonymizer_line=None):
     """Anonymize contents of input file and save to the output file.
 
     This only applies sensitive line removal if compiled_regexes and pwd_lookup
@@ -139,11 +144,14 @@ def anonymize_file(filename_in, filename_out, compiled_regexes=None,
 
             if anonymizer_as_num is not None:
                 output_line = anonymize_as_numbers(anonymizer_as_num, output_line)
+            if anonymizer_line is not None:
+                output_line = anonymizer_line.anonymize(output_line)
 
             if line != output_line:
                 logging.debug("Input line:  %s", line.rstrip())
-                logging.debug("Output line: %s", output_line.rstrip())
-            f_out.write(output_line)
+                logging.debug("Output line: %s", (None if output_line is None else output_line.rstrip()))
+            if (output_line is not None):
+                f_out.write(output_line)
 
 
 def _mkdirs(file_path):

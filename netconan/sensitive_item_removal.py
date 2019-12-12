@@ -178,6 +178,24 @@ class SensitiveWordAnonymizer(object):
         """Lookup anonymized word for the given sensitive word regex match."""
         return self.sens_word_replacements[match.group(0).lower()]
 
+class LineAnonymizer(object):
+    """An anonymizer for lines beginning with keywords."""
+
+    def __init__(self, line_beginnings):
+        """Create an anonymizer for lines beginning with specific keywords."""
+        self.line_regex = self._generate_line_regex(line_beginnings)
+
+    def anonymize(self, line):
+        """Determine whether to remove input line."""
+        if self.line_regex.match(line) is not None:
+            return None
+        return line
+
+    @classmethod
+    def _generate_line_regex(cls, line_beginnings):
+        """Compile and return regex for the specified list of sensitive words."""
+        return re.compile('[ \t]*({})'.format('|'.join(line_beginnings)), re.IGNORECASE)
+
 
 class _sensitive_item_formats(Enum):
     """Enum for recognized sensitive item formats (e.g. type7, md5, text)."""

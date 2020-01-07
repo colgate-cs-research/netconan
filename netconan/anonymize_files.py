@@ -127,7 +127,7 @@ def anonymize_file(filename_in, filename_out, compiled_regexes=None,
                          'output file is a directory ({})'
                          .format(filename_out))
 
-    with open(filename_out, 'w') as f_out, open(filename_in, 'r') as f_in:
+    with open(filename_out, 'w') as f_out, open(filename_in, 'r', errors='ignore') as f_in:
         for line in f_in:
             output_line = line
             if compiled_regexes is not None and pwd_lookup is not None:
